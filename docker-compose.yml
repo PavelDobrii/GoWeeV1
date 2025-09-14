@@ -66,3 +66,16 @@ services:
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - core-net
+  auth-profile:
+    build: ./services/auth_profile
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://cg:cg@postgres:5432/cityguide
+      JWT_SECRET: secret
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - postgres
+      - redpanda
+    networks:
+      - core-net
