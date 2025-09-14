@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "story_service"
+version = "0.1.0"
+description = "Story generation service"
+authors = ["Example <example@example.com>"]
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110.0"
+uvicorn = {version = "^0.30.0", extras = ["standard"]}
+aiokafka = "^0.10.0"
+pydantic-settings = "^2.1.0"
+sqlalchemy = "^2.0.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
