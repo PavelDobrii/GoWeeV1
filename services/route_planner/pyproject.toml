@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "route_planner"
+version = "0.1.0"
+description = "Route planner service"
+authors = ["Example <example@example.com>"]
+packages = [{ include = "app" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110.0"
+uvicorn = {version = "^0.30.0", extras = ["standard"]}
+prometheus-client = "^0.20.0"
+opentelemetry-sdk = "^1.24.0"
+opentelemetry-exporter-otlp = "^1.24.0"
+opentelemetry-instrumentation-fastapi = "^0.46b0"
+aiokafka = "^0.10.0"
+pydantic = "^2.7.0"
+pydantic-settings = "^2.1.0"
+sqlalchemy = "^2.0.0"
+alembic = "^1.13.0"
+psycopg = {version = "^3.1.0", extras = ["binary"]}
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
