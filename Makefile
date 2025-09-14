@@ -1,6 +1,9 @@
 COMPOSE = docker compose
 
-.PHONY: up down logs fmt lint tests build
+.PHONY: up down logs fmt lint typecheck tests build poetry
+
+poetry:
+	poetry install
 
 up:
 	$(COMPOSE) up -d
@@ -12,13 +15,16 @@ logs:
 	$(COMPOSE) logs -f
 
 fmt:
-	@echo "no formatting configured"
+	poetry run black .
 
 lint:
-	@echo "no lint configured"
+	poetry run ruff check .
+
+typecheck:
+	poetry run mypy .
 
 tests:
-	@echo "no tests configured"
+	poetry run pytest
 
 build:
 	@echo "no build configured"
