@@ -11,3 +11,4 @@ scrape_configs:
           - prometheus:9090
           - grafana:3000
           - postgres:5432
+          - auth-profile:8000
