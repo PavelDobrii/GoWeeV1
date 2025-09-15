@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: Delivery Prefetch API
+  version: 1.0.0
+paths:
+  /deliveries/prefetch:
+    post:
+      summary: Prefetch delivery data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderId:
+                  type: string
+      responses:
+        '200':
+          description: Prefetch accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string

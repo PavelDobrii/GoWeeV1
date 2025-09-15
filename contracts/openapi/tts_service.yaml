@@ -1,0 +1,29 @@
+openapi: 3.0.3
+info:
+  title: TTS Service API
+  version: 1.0.0
+paths:
+  /tts/synthesize:
+    post:
+      summary: Convert text to speech
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                voice:
+                  type: string
+      responses:
+        '200':
+          description: Synthesis result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audioUrl:
+                    type: string

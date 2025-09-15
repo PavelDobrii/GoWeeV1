@@ -1,0 +1,32 @@
+openapi: 3.0.3
+info:
+  title: Route Planner API
+  version: 1.0.0
+paths:
+  /routes:
+    post:
+      summary: Plan a route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start:
+                  type: string
+                destination:
+                  type: string
+      responses:
+        '200':
+          description: Planned route
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  routeId:
+                    type: string
+                  distance:
+                    type: number
+                    format: float

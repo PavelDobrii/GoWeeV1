@@ -1,0 +1,88 @@
+asyncapi: 2.6.0
+info:
+  title: CityGuide Events
+  version: 1.0.0
+channels:
+  route.confirmed:
+    publish:
+      message:
+        $ref: '#/components/messages/RouteConfirmed'
+  story.generate.{storyId}:
+    parameters:
+      storyId:
+        description: Identifier of the story
+        schema:
+          type: string
+    publish:
+      message:
+        $ref: '#/components/messages/StoryRequested'
+  tts.{voice}:
+    parameters:
+      voice:
+        description: Voice identifier
+        schema:
+          type: string
+    publish:
+      message:
+        $ref: '#/components/messages/TtsRequest'
+  delivery.prefetch.{orderId}:
+    parameters:
+      orderId:
+        description: Order identifier
+        schema:
+          type: string
+    publish:
+      message:
+        $ref: '#/components/messages/DeliveryPrefetch'
+  trip.{tripId}:
+    parameters:
+      tripId:
+        description: Trip identifier
+        schema:
+          type: string
+    publish:
+      message:
+        $ref: '#/components/messages/TripEvent'
+components:
+  messages:
+    RouteConfirmed:
+      name: RouteConfirmed
+      payload:
+        type: object
+        properties:
+          routeId:
+            type: string
+    StoryRequested:
+      name: StoryRequested
+      payload:
+        type: object
+        properties:
+          storyId:
+            type: string
+          prompt:
+            type: string
+    TtsRequest:
+      name: TtsRequest
+      payload:
+        type: object
+        properties:
+          voice:
+            type: string
+          text:
+            type: string
+    DeliveryPrefetch:
+      name: DeliveryPrefetch
+      payload:
+        type: object
+        properties:
+          orderId:
+            type: string
+    TripEvent:
+      name: TripEvent
+      payload:
+        type: object
+        properties:
+          tripId:
+            type: string
+          status:
+            type: string

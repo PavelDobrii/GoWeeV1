@@ -1,0 +1,26 @@
+openapi: 3.0.3
+info:
+  title: Auth Profile API
+  version: 1.0.0
+paths:
+  /profiles/{id}:
+    get:
+      summary: Get user profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
