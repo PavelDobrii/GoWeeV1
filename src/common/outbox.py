@@ -13,9 +13,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base, get_session
 from .kafka import KafkaProducer
 
+POLL_INTERVAL_SECONDS = 1.0
+#: Русский комментарий: интервал ожидания между попытками опроса очереди.
+
 
 class Outbox(Base):
-    """Table storing messages to be published to Kafka."""
+    """Таблица для сообщений, ожидающих публикации в Kafka."""
 
     __tablename__ = "outbox"
 
@@ -29,12 +32,13 @@ class Outbox(Base):
 
 
 def _serialize_payload(payload: Any) -> str:
-    return json.dumps(payload)
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
 async def enqueue(topic: str, key: str | None, payload: Any) -> None:
-    """Add a message to the outbox."""
+    """Добавить сообщение в outbox."""
 
+    # Русский комментарий: сохраняем событие в транзакции базы данных.
     async with get_session() as session:
         session.add(
             Outbox(topic=topic, key=key, payload_json=_serialize_payload(payload))
@@ -42,24 +46,33 @@ async def enqueue(topic: str, key: str | None, payload: Any) -> None:
         await session.commit()
 
 
-async def drain_outbox(producer: KafkaProducer, batch_size: int = 100) -> None:
-    """Background task that sends pending outbox messages to Kafka."""
+async def drain_outbox(
+    producer: KafkaProducer,
+    batch_size: int = 100,
+    poll_interval: float = POLL_INTERVAL_SECONDS,
+) -> None:
+    """Фоновая задача, публикующая сообщения из outbox в Kafka."""
+
+    stmt = select(Outbox).where(Outbox.sent_at.is_(None)).order_by(Outbox.id)
 
     while True:
         async with get_session() as session:
-            result = await session.execute(
-                select(Outbox).where(Outbox.sent_at.is_(None)).order_by(Outbox.id).limit(batch_size)
-            )
-            rows = result.scalars().all()
+            rows = list(await session.scalars(stmt.limit(batch_size)))
             if not rows:
-                await asyncio.sleep(1)
+                # Русский комментарий: делаем паузу, чтобы не нагружать CPU
+                # пустыми циклами.
+                await asyncio.sleep(poll_interval)
                 continue
             for row in rows:
                 try:
-                    await producer.send(
-                        row.topic, row.key, json.loads(row.payload_json)
-                    )
+                    # Русский комментарий: отправляем уже сериализованный JSON
+                    # без повторного парсинга.
+                    await producer.send(row.topic, row.key, row.payload_json)
                     row.sent_at = datetime.utcnow()
-                except Exception:  # pragma: no cover - log in real application
+                except Exception:  # pragma: no cover - логгирование в реальном сервисе
                     row.attempts += 1
             await session.commit()
+            if len(rows) < batch_size:
+                # Русский комментарий: если сообщений меньше лимита, можно
+                # сделать паузу.
+                await asyncio.sleep(poll_interval)
