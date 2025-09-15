@@ -2,91 +2,80 @@
 @routes = http://localhost:8002
 @prefetch = http://localhost:8006
 @trip = http://localhost:8007
-@email = user{{timestamp}}@example.com
+@email = user{{$randomInt}}@example.com
+@password = pass
 
-###
-# Register
+### Register
 POST {{auth}}/auth/register
 Content-Type: application/json
 
 {
   "email": "{{email}}",
-  "password": "pass"
+  "password": "{{password}}"
 }
 
-###
-# Login
+### Login
 POST {{auth}}/auth/login
 Content-Type: application/json
 
 {
   "email": "{{email}}",
-  "password": "pass"
+  "password": "{{password}}"
 }
+> {% client.global.set("token", response.body.access_token); %}
 
-> {% client.global.set("token", response.body.access_token) %}
-
-###
-# Preview route
+### Preview route
 POST {{routes}}/routes/preview
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-  "poi_ids": [1,2,3,4],
+  "poi_ids": [1, 2, 3, 4],
   "mode": "car",
   "duration_target_min": 60
 }
+> {% client.global.set("option", response.body.options[0].option_id); %}
 
-> {% client.global.set("optionId", response.body.options[0].option_id) %}
-
-###
-# Confirm route
+### Confirm route
 POST {{routes}}/routes/confirm
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-  "option_id": "{{optionId}}"
+  "option_id": "{{option}}"
 }
+> {% client.global.set("route_id", response.body.route_id); %}
 
-> {% client.global.set("routeId", response.body.route_id) %}
+### Wait then prefetch
+# sleep 1s
+GET {{prefetch}}/delivery/prefetch?route_id={{route_id}}&next=1
+Authorization: Bearer {{token}}
 
-###
-# Wait for events
-@sleep(1000)
-
-###
-# Prefetch
-GET {{prefetch}}/delivery/prefetch?route_id={{routeId}}&next=1
-
-###
-# Start trip
+### Start trip
 POST {{trip}}/trip/start
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-  "route_id": {{routeId}}
+  "route_id": {{route_id}}
 }
+> {% client.global.set("session_id", response.body.session_id); %}
 
-> {% client.global.set("sessionId", response.body.session_id) %}
-
-###
-# Ping trip
+### Ping
 POST {{trip}}/trip/ping
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-  "session_id": "{{sessionId}}",
-  "points": [
-    {"lat": 55.751244, "lon": 37.618423}
-  ]
+  "session_id": "{{session_id}}",
+  "points": [{"lat": 55.751244, "lon": 37.618423}]
 }
 
-###
-# Finish trip
+### Finish trip
 POST {{trip}}/trip/finish
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
-  "session_id": "{{sessionId}}"
+  "session_id": "{{session_id}}"
 }
-
