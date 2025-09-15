@@ -14,6 +14,10 @@ build/
 venv/
 __pycache__/
 
+# Dependency locks
+poetry.lock
+*/poetry.lock
+
 # Editors
 .idea/
 .vscode/
