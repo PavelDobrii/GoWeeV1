@@ -8,11 +8,13 @@ from typing import Any, Coroutine
 from fastapi import FastAPI
 
 from src.common.kafka import KafkaConsumer, KafkaProducer
+from src.common.metrics import KAFKA_CONSUMER_LAG, JOB_DURATION, setup_metrics
 from src.common.settings import settings
 
 from . import api, workflow
 
 app = FastAPI()
+setup_metrics(app, "orchestrator")
 app.include_router(api.router)
 
 _producer: KafkaProducer | None = None
@@ -61,6 +63,10 @@ async def startup() -> None:
     _start_consumer(_consume_route_confirmed(manager))
     _start_consumer(_consume_story(manager))
     _start_consumer(_consume_tts(manager))
+    KAFKA_CONSUMER_LAG.labels("orchestrator", "route.confirmed").set(0)
+    KAFKA_CONSUMER_LAG.labels("orchestrator", "story.generate").set(0)
+    KAFKA_CONSUMER_LAG.labels("orchestrator", "tts").set(0)
+    JOB_DURATION.labels("orchestrator", "startup").observe(0)
 
 
 @app.on_event("shutdown")
