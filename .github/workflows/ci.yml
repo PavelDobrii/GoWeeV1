@@ -17,6 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
+          poetry lock
           poetry install --no-interaction --no-root
       - name: Lint
         run: poetry run ruff check .
