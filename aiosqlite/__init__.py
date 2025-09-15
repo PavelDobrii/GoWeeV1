@@ -19,7 +19,9 @@ class Cursor:
         self.lastrowid = cursor.lastrowid
         self.rowcount = cursor.rowcount
 
-    async def execute(self, sql: str, parameters: Optional[Iterable[Any]] = None) -> "Cursor":
+    async def execute(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> "Cursor":
         if parameters is None:
             await asyncio.to_thread(self._cursor.execute, sql)
         else:
@@ -53,7 +55,9 @@ class Connection:
         cur = await asyncio.to_thread(self._conn.cursor)
         return Cursor(cur)
 
-    async def execute(self, sql: str, parameters: Optional[Iterable[Any]] = None) -> Cursor:
+    async def execute(
+        self, sql: str, parameters: Optional[Iterable[Any]] = None
+    ) -> Cursor:
         cur = await self.cursor()
         await cur.execute(sql, parameters)
         return cur

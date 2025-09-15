@@ -22,10 +22,12 @@ echo "token: ${ACCESS:0:8}..."
 
 # Preview route and capture option id
 OPTION=$(curl -s -X POST "$ROUTES/routes/preview" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS" \
   -d '{"poi_ids":[1,2,3,4],"mode":"car","duration_target_min":60}' | jq -r '.options[0].option_id')
 
 # Confirm route and capture route id
 ROUTE=$(curl -s -X POST "$ROUTES/routes/confirm" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS" \
   -d "{\"option_id\":\"$OPTION\"}" | jq -r .route_id)
 
 echo "route: $ROUTE"
@@ -34,21 +36,25 @@ sleep 1
 
 # Prefetch and capture status
 PREF_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer $ACCESS" \
   "$PREFETCH/delivery/prefetch?route_id=$ROUTE&next=1")
 
 # Start trip and capture session id
 SESSION=$(curl -s -X POST "$TRIP/trip/start" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS" \
   -d "{\"route_id\":$ROUTE}" | jq -r .session_id)
 
 echo "session: $SESSION"
 
 # Ping trip
 curl -s -o /dev/null -X POST "$TRIP/trip/ping" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS" \
   -d "{\"session_id\":\"$SESSION\",\"points\":[{\"lat\":55.751244,\"lon\":37.618423}]}"
 
 # Finish trip and capture status
 FIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$TRIP/trip/finish" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS" \
   -d "{\"session_id\":\"$SESSION\"}")
 
 printf "%s\n%s\n%s\n" "$REG_CODE" "$PREF_CODE" "$FIN_CODE"
