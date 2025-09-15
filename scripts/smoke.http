@@ -1,0 +1,92 @@
+@auth = http://localhost:8001
+@routes = http://localhost:8002
+@prefetch = http://localhost:8006
+@trip = http://localhost:8007
+@email = user{{timestamp}}@example.com
+
+###
+# Register
+POST {{auth}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "pass"
+}
+
+###
+# Login
+POST {{auth}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "pass"
+}
+
+> {% client.global.set("token", response.body.access_token) %}
+
+###
+# Preview route
+POST {{routes}}/routes/preview
+Content-Type: application/json
+
+{
+  "poi_ids": [1,2,3,4],
+  "mode": "car",
+  "duration_target_min": 60
+}
+
+> {% client.global.set("optionId", response.body.options[0].option_id) %}
+
+###
+# Confirm route
+POST {{routes}}/routes/confirm
+Content-Type: application/json
+
+{
+  "option_id": "{{optionId}}"
+}
+
+> {% client.global.set("routeId", response.body.route_id) %}
+
+###
+# Wait for events
+@sleep(1000)
+
+###
+# Prefetch
+GET {{prefetch}}/delivery/prefetch?route_id={{routeId}}&next=1
+
+###
+# Start trip
+POST {{trip}}/trip/start
+Content-Type: application/json
+
+{
+  "route_id": {{routeId}}
+}
+
+> {% client.global.set("sessionId", response.body.session_id) %}
+
+###
+# Ping trip
+POST {{trip}}/trip/ping
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "points": [
+    {"lat": 55.751244, "lon": 37.618423}
+  ]
+}
+
+###
+# Finish trip
+POST {{trip}}/trip/finish
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}"
+}
+
