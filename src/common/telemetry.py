@@ -21,6 +21,8 @@ def setup_otel(app: FastAPI, service_name: str = "app") -> None:
 
     resource = Resource.create({"service.name": service_name})
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not endpoint:  # skip setup if no collector endpoint configured
+        return
 
     # Traces
     tracer_provider = TracerProvider(resource=resource)
