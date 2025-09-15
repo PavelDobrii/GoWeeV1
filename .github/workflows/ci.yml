@@ -49,19 +49,22 @@ jobs:
             path: services/trip_runtime
           - service: template_service
             path: template_service
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Log in to GHCR
-        if: ${{ secrets.GHCR_USERNAME != '' && secrets.GHCR_TOKEN != '' }}
+        if: ${{ env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ env.GHCR_USERNAME }}
+          password: ${{ env.GHCR_TOKEN }}
       - name: Build and push image
-        if: ${{ secrets.GHCR_USERNAME != '' && secrets.GHCR_TOKEN != '' }}
+        if: ${{ env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}
         env:
-          IMAGE: ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ matrix.service }}
+          IMAGE: ghcr.io/${{ env.GHCR_USERNAME }}/${{ matrix.service }}
         run: |
           docker build -t $IMAGE:${{ github.sha }} ${{ matrix.path }}
           docker push $IMAGE:${{ github.sha }}
