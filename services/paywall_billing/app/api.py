@@ -32,9 +32,12 @@ def paywall_check(action: str) -> schemas.PaywallCheckResponse:
         _usage_day = today
         _usage_count = 0
     show = _usage_count >= _FREE_PER_DAY
-    if not show:
-        _usage_count += 1
-    return schemas.PaywallCheckResponse(show=show)
+    if show:
+        return schemas.PaywallCheckResponse(
+            show=True, reason="daily_limit", sku="premium"
+        )
+    _usage_count += 1
+    return schemas.PaywallCheckResponse(show=False)
 
 
 @router.post(
