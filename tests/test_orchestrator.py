@@ -21,7 +21,10 @@ class DummyProducer:
 
 
 @pytest.mark.anyio
-async def test_story_and_tts_flow(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+async def test_story_and_tts_flow(
+    monkeypatch: pytest.MonkeyPatch, anyio_backend: str
+) -> None:
     class TestSettings(Settings):
         kafka_brokers = "kafka:9092"
         postgres_dsn = "sqlite+aiosqlite:///:memory:"
