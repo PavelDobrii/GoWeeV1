@@ -1,10 +1,41 @@
-# Paywall Billing Service
+# Сервис Paywall Billing
 
-Stub service providing simple paywall and in-app purchase validation.
+## Назначение
+Paywall Billing имитирует биллинговое поведение мобильного клиента: считает бесплатные действия в сутки, принимает фиктивные чеки внутриигровых покупок и сообщает о статусе подписки. Хранилище отсутствует — все данные живут в памяти до перезапуска процесса.
 
-## Endpoints
+## Основные возможности
+- Решает, нужно ли показывать paywall исходя из дневного лимита бесплатных действий.
+- Принимает поддельные чеки IAP и активирует подписку на 30 дней вперёд.
+- Возвращает актуальный статус подписки и время истечения.
+- Отдаёт стандартные эндпоинты здоровья и метрик Prometheus.
 
-- `GET /paywall/check?action=` – returns `{show: bool, reason?, sku?}` based on
-  daily free quota.
-- `POST /iap/validate` – accepts `{platform, receipt}` and activates subscription.
-- `GET /iap/status` – returns current subscription `{status, expire_at}`.
+## HTTP API
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `GET` | `/paywall/check?action=<строка>` | Возвращает `{show, reason?, sku?}` в зависимости от количества бесплатных действий за день. |
+| `POST` | `/iap/validate` | Принимает `{platform, receipt}` и активирует 30-дневную подписку. |
+| `GET` | `/iap/status` | Возвращает `{status, expire_at}` для текущей сессии. |
+| `GET` | `/healthz` | Проверка живости. |
+| `GET` | `/readyz` | Проверка готовности. |
+| `GET` | `/metrics` | Метрики Prometheus. |
+
+> Лимит бесплатных действий (`_FREE_PER_DAY = 1`) и данные подписки хранятся только в памяти. Перезапуск обнуляет состояние.
+
+## Конфигурация
+Сервис не использует переменные окружения — все значения зашиты в коде. При необходимости можно расширить настройки, добавив поля в `services/paywall_billing/app/main.py`.
+
+## Локальный запуск
+1. Установите зависимости:
+   ```bash
+   cd services/paywall_billing
+   poetry install
+   ```
+2. Запустите приложение:
+   ```bash
+   poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+3. Проверьте эндпоинты через Swagger UI `http://localhost:8000/docs` или с помощью `curl`.
+
+## Наблюдаемость
+- `/metrics` содержит стандартные счётчики и гистограммы из `src.common.metrics`.
+- OpenTelemetry не подключён; при необходимости добавьте вызовы `setup_otel` по аналогии с другими сервисами.

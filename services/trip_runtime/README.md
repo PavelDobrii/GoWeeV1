@@ -1,15 +1,54 @@
-# Trip Runtime Service
+# Сервис Trip Runtime
 
-Handles trip sessions, pings and approaching POI notifications.
+## Назначение
+Trip Runtime моделирует работу клиента во время активной поездки: хранит состояние сессии, принимает GPS-координаты и уведомляет другие системы о приближении пользователя к точкам интереса.
 
-## Running
+## Основные возможности
+- Запускает и завершает сессии поездки, генерируя уникальный `session_id`.
+- Обрабатывает пакеты GPS-точек, рассчитывая дистанцию до ближайшего POI.
+- При приближении менее чем на 60 метров публикует событие `trip.poi.approaching` и переводит указатель на следующую точку.
+- Отдаёт стандартные эндпоинты `/healthz`, `/readyz`, `/metrics`.
 
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+## HTTP API
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `POST` | `/trip/start` | Создаёт сессию для `{route_id}` и возвращает `session_id`. |
+| `POST` | `/trip/ping` | Принимает `{session_id, points}` (массив GPS-пингов) и сообщает о следующем POI и расстоянии. |
+| `POST` | `/trip/finish` | Завершает отслеживание сессии. |
+| `GET` | `/healthz` | Проверка живости. |
+| `GET` | `/readyz` | Проверка готовности. |
+| `GET` | `/metrics` | Метрики Prometheus. |
 
-### Endpoints
+Маршруты и точки интереса предзаданы в коде. Все данные по сессиям хранятся в памяти и очищаются при перезапуске сервиса.
 
-* `POST /trip/start` – start a session
-* `POST /trip/ping` – send points and get upcoming POI
-* `POST /trip/finish` – finish a session
+## Kafka-топики
+| Направление | Топик | Пайлоад |
+| --- | --- | --- |
+| Produce | `trip.poi.approaching` | `{ "session_id": <str>, "poi_id": <int>, "distance_m": <float> }` — отправляется при приближении к точке. |
+
+Kafka не обязательна, но без неё уведомления downstream-сервисам отправляться не будут.
+
+## Конфигурация
+| Переменная | Обязательна | По умолчанию | Описание |
+| --- | --- | --- | --- |
+| `KAFKA_BROKERS` | Нет | – | Список брокеров Kafka/Redpanda для публикации событий. |
+
+## Локальный запуск
+1. Установите зависимости:
+   ```bash
+   cd services/trip_runtime
+   poetry install
+   ```
+2. (Опционально) включите Kafka-уведомления:
+   ```bash
+   export KAFKA_BROKERS=localhost:9092
+   ```
+3. Запустите API:
+   ```bash
+   poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+4. Начните сессию `/trip/start`, затем периодически отправляйте координаты через `/trip/ping` и завершите `/trip/finish`.
+
+## Наблюдаемость
+- `/metrics` содержит метрики времени обработки запросов.
+- OpenTelemetry не настроен; при необходимости добавьте интеграцию по аналогии с другими сервисами.
