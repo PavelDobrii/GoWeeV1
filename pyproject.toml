@@ -23,6 +23,8 @@ opentelemetry-instrumentation-psycopg = "^0.46b0"
 prometheus-client = "^0.20.0"
 aiokafka = "^0.10.0"
 structlog = "^24.1.0"
+aiosqlite = "^0.20.0"
+trio = "^0.25.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"

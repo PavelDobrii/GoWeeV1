@@ -23,11 +23,14 @@ class SettingsMeta(ModelMetaclass):
 class Settings(BaseSettings, metaclass=SettingsMeta):
     """Base settings for all services."""
 
-    kafka_brokers: str = Field(..., alias="KAFKA_BROKERS")
+    # Provide sensible defaults so tests can import modules without having
+    # the environment configured. Real deployments should override these
+    # via environment variables.
+    kafka_brokers: str = Field("kafka:9092", alias="KAFKA_BROKERS")
     otel_exporter_otlp_endpoint: str | None = Field(
         default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT"
     )
-    postgres_dsn: str = Field(..., alias="POSTGRES_DSN")
+    postgres_dsn: str = Field("sqlite://", alias="POSTGRES_DSN")
 
     model_config = {
         "env_file": ".env",
