@@ -1,10 +1,10 @@
-"""Workflow orchestration logic."""
+"""Логика оркестрации рабочего процесса."""
 
 from __future__ import annotations
 
 import inspect
-import time
 import logging
+import time
 from typing import Any
 
 from prometheus_client import Histogram
@@ -26,7 +26,7 @@ ROUTE_TO_AUDIO_SECONDS = Histogram(
 
 
 class WorkflowManager:
-    """Handle workflow state transitions and Kafka messaging."""
+    """Управляет переходами состояний и отправкой сообщений в Kafka."""
 
     def __init__(self, producer: KafkaProducer) -> None:
         self.producer = producer
@@ -107,7 +107,8 @@ class WorkflowManager:
             }
             if not text:
                 logger.warning(
-                    "Пустой текст истории %s, отправляется только совместимое сообщение",
+                    "Пустой текст истории %s, "
+                    "отправляется только совместимое сообщение",
                     story_id,
                 )
             if story.get("voice"):

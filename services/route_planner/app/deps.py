@@ -1,5 +1,4 @@
 from functools import lru_cache
-from functools import lru_cache
 from typing import Generator
 
 from pydantic_settings import BaseSettings

@@ -58,8 +58,10 @@ class GoogleTextToSpeech:
 
         key = (value or "").lower()
         if key not in _FORMATS:
+            allowed_formats = ", ".join(_FORMATS)
             raise TextToSpeechError(
-                f"Неизвестный формат аудио '{value}'. Поддерживаются: {', '.join(_FORMATS)}."
+                f"Неизвестный формат аудио '{value}'. "
+                f"Поддерживаются: {allowed_formats}."
             )
         return _FORMATS[key]
 
@@ -85,11 +87,12 @@ class GoogleTextToSpeech:
             language_code=language or self._default_language,
             name=voice or self._default_voice,
         )
+        profile = [self._effects_profile] if self._effects_profile else None
         audio_config = texttospeech.AudioConfig(
             audio_encoding=encoding,
             speaking_rate=self._speaking_rate,
             pitch=self._pitch,
-            effects_profile_id=[self._effects_profile] if self._effects_profile else None,
+            effects_profile_id=profile,
         )
         try:
             response = self._client.synthesize_speech(
@@ -97,7 +100,8 @@ class GoogleTextToSpeech:
                 voice=voice_params,
                 audio_config=audio_config,
             )
-        except GoogleAPIError as exc:  # pragma: no cover - сетевые ошибки сложно тестировать
+        except GoogleAPIError as exc:  # pragma: no cover
+            # Сетевые ошибки сложно стабильно воспроизвести в тестах.
             logger.exception("Ошибка Google TTS: %s", exc)
             raise TextToSpeechError("Google TTS вернул ошибку") from exc
         words = max(len(text.split()), 1)

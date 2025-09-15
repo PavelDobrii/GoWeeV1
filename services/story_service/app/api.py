@@ -44,7 +44,8 @@ def _generate_single(poi_id: int, lang: str, tags: list[str]) -> dict[str, Any]:
             logger.warning("Генерация истории не удалась: %s", exc)
             text = (
                 "# Ошибка генерации\n\n"
-                "Не удалось получить рассказ из ChatGPT. Попробуйте повторить запрос позже."
+                "Не удалось получить рассказ из ChatGPT. "
+                "Попробуйте повторить запрос позже."
             )
             status = "failed"
         forbidden = forbidden_words()
@@ -62,7 +63,9 @@ def _generate_single(poi_id: int, lang: str, tags: list[str]) -> dict[str, Any]:
         db.close()
 
 
-async def _send_completed(route_id: str, lang: str, stories: list[dict[str, Any]]) -> None:
+async def _send_completed(
+    route_id: str, lang: str, stories: list[dict[str, Any]]
+) -> None:
     settings = deps.get_settings()
     if not settings.kafka_brokers:
         return

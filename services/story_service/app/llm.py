@@ -110,7 +110,8 @@ class ChatGPTStoryGenerator:
                 temperature=self._temperature,
                 max_tokens=self._max_tokens,
             )
-        except OpenAIError as exc:  # pragma: no cover - сетевые ошибки трудно воспроизвести
+        except OpenAIError as exc:  # pragma: no cover
+            # Сетевые ошибки трудно воспроизвести в автоматических тестах.
             logger.exception("Не удалось получить ответ от ChatGPT")
             raise StoryGenerationError("ChatGPT недоступен") from exc
         choice = response.choices[0]
