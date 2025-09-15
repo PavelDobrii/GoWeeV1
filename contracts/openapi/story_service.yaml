@@ -1,0 +1,29 @@
+openapi: 3.0.3
+info:
+  title: Story Service API
+  version: 1.0.0
+paths:
+  /stories:
+    post:
+      summary: Generate a story
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: Generated story
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storyId:
+                    type: string
+                  content:
+                    type: string

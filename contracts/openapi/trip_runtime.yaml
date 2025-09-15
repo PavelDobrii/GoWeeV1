@@ -1,0 +1,24 @@
+openapi: 3.0.3
+info:
+  title: Trip Runtime API
+  version: 1.0.0
+paths:
+  /trips/{id}/status:
+    get:
+      summary: Get trip status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trip status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
