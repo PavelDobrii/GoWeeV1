@@ -1,10 +1,65 @@
-# TTS Service
+# Сервис TTS
 
-Stub service for text-to-speech generation.
+## Назначение
+TTS Service — заглушка, имитирующая систему синтеза речи. Сервис слушает Kafka-запросы, создаёт пустые аудио-файлы, сохраняет метаданные в базе и уведомляет downstream-сервисы о завершении обработки. Дополнительно имеется HTTP-эндпоинт для ручного запуска синтеза.
 
-## Endpoints
+## Основные возможности
+- Потребляет события `tts.requested` и создаёт записи аудио с указанными параметрами (голос, формат).
+- Пишет метаданные аудио (путь, длительность, формат) в таблицу `audio_files`.
+- Эмитирует `tts.completed` после завершения обработки.
+- Позволяет вручную инициировать синтез через HTTP, при необходимости также публикуя `tts.requested`.
+- Гарантирует существование каталога с аудио при старте.
+- Предоставляет стандартные метрики и health-check'и.
 
-- `POST /tts/request` – request audio generation for a story.
+## HTTP API
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `POST` | `/tts/request` | Принимает `{story_id, voice, format}` и возвращает `job_id`. Если Kafka настроена, дополнительно публикует `tts.requested`. |
+| `GET` | `/healthz` | Проверка живости. |
+| `GET` | `/readyz` | Проверка готовности. |
+| `GET` | `/metrics` | Метрики Prometheus. |
 
-The service also listens to `tts.requested` Kafka topic and produces
-`tts.completed` events after creating a placeholder audio file.
+## Kafka-топики
+| Направление | Топик | Пайлоад |
+| --- | --- | --- |
+| Consume | `tts.requested` | `{ "story_id": <str>, "voice": <str>, "format": <str>, ... }` — задания на синтез. |
+| Produce | `tts.completed` | `{ "story_id": <str>, "audio_id": <int>, "duration_sec": 0 }` — отправляется после сохранения аудио. |
+| Produce | `tts.requested` | Дублирует входной формат, используется HTTP-эндпоинтом, если Kafka включена. |
+
+Сообщения дедуплицируются по ключу Kafka, поэтому повторные публикации безопасны.
+
+## Хранилище и файлы
+- При первом запуске автоматически создаётся таблица `audio_files` в базе из `DATABASE_URL` (по умолчанию SQLite `tts_service.db`).
+- Файлы формируются в каталоге `AUDIO_DIR` (default `data/audio`). Каталог создаётся автоматически и сохраняется между запусками.
+
+## Конфигурация
+| Переменная | Обязательна | По умолчанию | Описание |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | Нет | `sqlite:///./tts_service.db` | SQLAlchemy URL для хранения метаданных аудио. |
+| `KAFKA_BROKERS` | Нет | – | Список брокеров Kafka/Redpanda. Необходим для потребления и публикации событий. |
+| `AUDIO_DIR` | Нет | `data/audio` | Каталог для сохранения файлов. Создаётся автоматически. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Нет | – | Эндпоинт OTLP для экспорта трассировок Kafka/HTTP. |
+
+## Локальный запуск
+1. Установите зависимости:
+   ```bash
+   cd services/tts_service
+   poetry install
+   ```
+2. (Опционально) включите Kafka:
+   ```bash
+   export KAFKA_BROKERS=localhost:9092
+   ```
+3. Настройте каталог для аудио (если требуется):
+   ```bash
+   export AUDIO_DIR=/tmp/tts-audio
+   ```
+4. Запустите API:
+   ```bash
+   poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+5. Убедитесь, что фоновый потребитель Kafka запущен (автоматически стартует при наличии `KAFKA_BROKERS`) и отправьте сообщение в `tts.requested` или вызовите HTTP-эндпоинт.
+
+## Наблюдаемость
+- `/metrics` отдаёт метрики длительности обработки и лагов Kafka (`JOB_DURATION`, `KAFKA_CONSUMER_LAG`).
+- При задании `OTEL_EXPORTER_OTLP_ENDPOINT` сервис экспортирует трассировки всех операций Kafka и HTTP.

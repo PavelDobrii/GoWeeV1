@@ -1,19 +1,43 @@
-# Template Service
+# Шаблон сервиса
 
-Minimal FastAPI service template with OpenTelemetry, Prometheus metrics and a Kafka consumer loop.
+## Назначение
+`template_service` — минимальный шаблон микросервиса на FastAPI. Он уже содержит интеграцию с Prometheus, базовую настройку OpenTelemetry и пример потребителя Kafka. Используйте директорию как отправную точку для создания новых сервисов.
 
-## Running
+## Возможности шаблона
+- FastAPI-приложение с готовыми health-check'ами `/healthz` и `/readyz`.
+- Метрики Prometheus по пути `/metrics` (через `prometheus_client` и `src.common.metrics`).
+- Инициализация OpenTelemetry (`setup_otel`) для автоматической трассировки обработчиков.
+- Пример фонового цикла Kafka (`app.kafka_loop`) с дедупликацией сообщений по ключу.
+- Централизованная работа с конфигурацией через `pydantic-settings`.
 
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+## Kafka
+Пример цикла в `app/kafka_loop.py` читает сообщения из одного топика и логирует payload. Чтобы включить обработку, задайте переменные `KAFKA_BROKERS` и `KAFKA_TOPIC_IN`. Дедупликация основана на ключе сообщения: повторения игнорируются.
 
-### Endpoints
+## Конфигурация
+| Переменная | Обязательна | По умолчанию | Описание |
+| --- | --- | --- | --- |
+| `KAFKA_BROKERS` | Нет | – | Брокеры Kafka/Redpanda. Требуются для запуска примерного потребителя. |
+| `KAFKA_TOPIC_IN` | Нет | – | Топик, из которого читает примерный потребитель. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Нет | – | Адрес OTLP для экспорта трассировок. |
 
-* `/healthz` – liveness probe
-* `/readyz` – readiness probe
-* `/metrics` – Prometheus metrics
+## Локальный запуск
+1. Установите зависимости:
+   ```bash
+   cd template_service
+   poetry install
+   ```
+2. (Опционально) настройте Kafka:
+   ```bash
+   export KAFKA_BROKERS=localhost:9092
+   export KAFKA_TOPIC_IN=demo.topic
+   ```
+3. Запустите сервис:
+   ```bash
+   poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+4. Проверьте автоматическую документацию `http://localhost:8000/docs` и метрики `http://localhost:8000/metrics`.
 
-### Kafka consumer
-
-Set the environment variables `KAFKA_BROKERS` and `KAFKA_TOPIC_IN` to start the Kafka consumer loop. On startup, a log message confirms the loop launch and messages are processed idempotently using an in-memory cache.
+## Расширение
+- Добавляйте роуты в `app/api.py`, соответствующие схемы — в `app/schemas.py`.
+- Общую бизнес-логику размещайте в подмодулях `app/`.
+- Для работы с БД создайте модели в `app/models.py` и настройте зависимости так же, как в существующих сервисах.
