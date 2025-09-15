@@ -1,11 +1,12 @@
+import asyncio
 import json
 from typing import Any
 
-import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from services.tts_service.app import deps, kafka_loop, models
+from services.tts_service.app import api, deps, kafka_loop, models
+from services.tts_service.app import main as main_module
 from services.tts_service.app.main import app
 
 
@@ -21,8 +22,6 @@ def client(tmp_path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     deps._SessionLocal = None  # type: ignore[attr-defined]
     deps.init_db()
 
-    from services.tts_service.app import api, main as main_module
-
     messages: list[dict[str, Any]] = []
 
     class DummyProducer:
@@ -35,7 +34,8 @@ def client(tmp_path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
         async def send_and_wait(self, topic: str, value: bytes, key: bytes) -> None:
             messages.append({"topic": topic, "value": value, "key": key})
 
-    async def dummy_start_consumer(settings: deps.Settings) -> None:  # pragma: no cover - patched
+    async def dummy_start_consumer(settings: deps.Settings) -> None:  # pragma: no cover
+        """Patched Kafka consumer starter."""
         pass
 
     monkeypatch.setattr(api, "AIOKafkaProducer", lambda *a, **k: DummyProducer())
@@ -50,7 +50,10 @@ def client(tmp_path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def test_request_tts_publishes_event(client: TestClient) -> None:
-    resp = client.post("/tts/request", json={"story_id": 1, "voice": "v1", "format": "mp3"})
+    resp = client.post(
+        "/tts/request",
+        json={"story_id": 1, "voice": "v1", "format": "mp3"},
+    )
     assert resp.status_code == 202
     assert resp.json()["job_id"]
 

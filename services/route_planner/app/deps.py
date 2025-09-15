@@ -4,6 +4,8 @@ from typing import Generator
 from pydantic_settings import BaseSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from src.common.settings import SettingsMeta
 
 
@@ -25,8 +27,17 @@ def get_sessionmaker() -> sessionmaker:
     global _engine, _SessionLocal
     if _SessionLocal is None:
         settings = get_settings()
-        _engine = create_engine(settings.database_url, future=True)
-        _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
+        connect_args: dict[str, object] = {}
+        kwargs: dict[str, object] = {"future": True}
+        if settings.database_url.endswith(":memory:"):
+            kwargs["poolclass"] = StaticPool
+            connect_args["check_same_thread"] = False
+        _engine = create_engine(
+            settings.database_url, connect_args=connect_args, **kwargs
+        )
+        _SessionLocal = sessionmaker(
+            bind=_engine, autoflush=False, autocommit=False, expire_on_commit=False
+        )
     return _SessionLocal
 
 

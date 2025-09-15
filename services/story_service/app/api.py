@@ -4,7 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from aiokafka import AIOKafkaProducer
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks
 from opentelemetry import trace
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,11 @@ from . import deps, models, qc, schemas
 router = APIRouter()
 
 
-FORBIDDEN = lambda: [w.strip() for w in deps.get_settings().forbidden_words.split(",") if w.strip()]
+
+def forbidden_words() -> list[str]:
+    """Return forbidden words from settings."""
+    settings = deps.get_settings()
+    return [w.strip() for w in settings.forbidden_words.split(",") if w.strip()]
 
 
 def _fake_llm(poi_id: int, lang: str, tags: list[str]) -> str:
@@ -41,7 +45,7 @@ def _generate_single(poi_id: int, lang: str, tags: list[str]) -> int:
     db = SessionLocal()
     try:
         text = _fake_llm(poi_id, lang, tags)
-        forbidden = FORBIDDEN()
+        forbidden = forbidden_words()
         status = "completed" if qc.check_quality(text, forbidden) else "rejected"
         story_id = _store_story(db, poi_id, lang, text, status)
         return story_id
@@ -77,17 +81,22 @@ def _process_batch(route_id: str, lang: str) -> None:
     asyncio.run(_send_completed(route_id, stories))
 
 
-@router.post("/story/generate", response_model=schemas.JobResponse, status_code=202)
-def generate_story(data: schemas.GenerateRequest, background_tasks: BackgroundTasks) -> schemas.JobResponse:
+@router.post(
+    "/story/generate", response_model=schemas.JobResponse, status_code=202
+)
+def generate_story(
+    data: schemas.GenerateRequest, background_tasks: BackgroundTasks
+) -> schemas.JobResponse:
     job_id = str(uuid4())
     background_tasks.add_task(_generate_single, data.poi_id, data.lang, data.tags)
     return schemas.JobResponse(job_id=job_id)
 
 
-@router.post("/story/generate_batch", response_model=schemas.JobResponse, status_code=202)
+@router.post(
+    "/story/generate_batch", response_model=schemas.JobResponse, status_code=202
+)
 def generate_batch(
-    data: schemas.GenerateBatchRequest,
-    background_tasks: BackgroundTasks,
+    data: schemas.GenerateBatchRequest, background_tasks: BackgroundTasks
 ) -> schemas.JobResponse:
     job_id = str(uuid4())
     background_tasks.add_task(_process_batch, data.route_id, data.lang)

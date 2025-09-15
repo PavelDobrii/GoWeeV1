@@ -13,7 +13,9 @@ def _sign(audio_id: int, ttl: int, secret: str) -> str:
 
 
 @router.get("/delivery/prefetch", response_model=schemas.PrefetchResponse)
-async def get_prefetch(route_id: str, next: int = Query(1, ge=1)) -> schemas.PrefetchResponse:
+async def get_prefetch(
+    route_id: str, next: int = Query(1, ge=1)
+) -> schemas.PrefetchResponse:
     settings = deps.get_settings()
     ttl = settings.link_ttl_sec
     secret = settings.secret

@@ -1,6 +1,8 @@
 """Initial tables for auth_profile service"""
-from alembic import op
+
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = '20240605_init_auth_profile'
 down_revision = None
@@ -18,16 +20,38 @@ def upgrade() -> None:
     op.create_table(
         'profiles',
         sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=False, unique=True),
+        sa.Column(
+            'user_id',
+            sa.Integer(),
+            sa.ForeignKey('users.id'),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column('first_name', sa.String(length=255)),
         sa.Column('last_name', sa.String(length=255)),
     )
     op.create_table(
         'consents',
         sa.Column('id', sa.Integer(), primary_key=True),
-        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=False, unique=True),
-        sa.Column('marketing', sa.Boolean(), nullable=False, server_default=sa.text('false')),
-        sa.Column('terms', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+        sa.Column(
+            'user_id',
+            sa.Integer(),
+            sa.ForeignKey('users.id'),
+            nullable=False,
+            unique=True,
+        ),
+        sa.Column(
+            'marketing',
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text('false'),
+        ),
+        sa.Column(
+            'terms',
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text('false'),
+        ),
     )
 
 def downgrade() -> None:

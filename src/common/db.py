@@ -16,7 +16,7 @@ from sqlalchemy.orm import declarative_base
 from alembic import command  # type: ignore[attr-defined]
 from alembic.config import Config
 
-from .settings import settings
+from . import settings as common_settings
 
 Base = declarative_base()
 
@@ -27,7 +27,15 @@ _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
-        _engine = create_async_engine(settings.postgres_dsn, future=True, echo=False)
+        url = common_settings.settings.postgres_dsn
+        kwargs: dict[str, object] = {"future": True, "echo": False}
+        connect_args: dict[str, object] = {}
+        if url.startswith("sqlite") and ":memory:" in url:
+            from sqlalchemy.pool import StaticPool
+
+            kwargs["poolclass"] = StaticPool
+            connect_args["check_same_thread"] = False
+        _engine = create_async_engine(url, connect_args=connect_args, **kwargs)
     return _engine
 
 
@@ -51,7 +59,7 @@ def alembic_config() -> Config:
     """Create Alembic configuration with runtime database DSN."""
 
     cfg = Config("alembic.ini")
-    cfg.set_main_option("sqlalchemy.url", settings.postgres_dsn)
+    cfg.set_main_option("sqlalchemy.url", common_settings.settings.postgres_dsn)
     return cfg
 
 

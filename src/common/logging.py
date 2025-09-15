@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, MutableMapping
 
 import structlog
 from opentelemetry.trace import get_current_span
@@ -12,8 +12,8 @@ from opentelemetry.trace import get_current_span
 def _add_trace_id(
     _logger: structlog.typing.WrappedLogger,
     _name: str,
-    event_dict: dict[str, Any],
-) -> dict[str, Any]:
+    event_dict: MutableMapping[str, Any],
+) -> MutableMapping[str, Any]:
     """Inject ``trace_id`` from the current span into log records."""
 
     span = get_current_span()
@@ -34,7 +34,7 @@ def setup_logging(level: int = logging.INFO) -> None:
             timestamper,
             structlog.processors.add_log_level,
             _add_trace_id,
-            structlog.processors.DictRenderer(),
+            structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(level),
         logger_factory=structlog.stdlib.LoggerFactory(),

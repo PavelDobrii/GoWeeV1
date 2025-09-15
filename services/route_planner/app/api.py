@@ -105,7 +105,9 @@ async def _send_route_confirmed(
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("event.produce:route.confirmed"):
             await producer.send_and_wait(
-                "route.confirmed", json.dumps(payload).encode(), key=str(route.id).encode()
+                "route.confirmed",
+                json.dumps(payload).encode(),
+                key=str(route.id).encode(),
             )
     finally:
         await producer.stop()

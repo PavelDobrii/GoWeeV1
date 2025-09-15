@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 from typing import Set
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -31,12 +32,17 @@ async def _handle_message(message) -> None:
     SessionLocal = deps.get_sessionmaker()
     db = SessionLocal()
     try:
-        audio = models.AudioFile(story_id=story_id, voice=voice, format=fmt, path="", duration_sec=0)
+        audio = models.AudioFile(
+            story_id=story_id,
+            voice=voice,
+            format=fmt,
+            path="",
+            duration_sec=0,
+        )
         db.add(audio)
         db.commit()
         db.refresh(audio)
         settings = deps.get_settings()
-        from pathlib import Path
 
         audio_path = Path(settings.audio_dir) / f"{audio.id}.{fmt}"
         audio.path = str(audio_path)
@@ -54,7 +60,9 @@ async def _handle_message(message) -> None:
             tracer = trace.get_tracer(__name__)
             with tracer.start_as_current_span("event.produce:tts.completed"):
                 await producer.send_and_wait(
-                    "tts.completed", json.dumps(out).encode(), key=str(story_id).encode()
+                    "tts.completed",
+                    json.dumps(out).encode(),
+                    key=str(story_id).encode(),
                 )
         finally:
             await producer.stop()
