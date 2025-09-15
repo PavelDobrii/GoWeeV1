@@ -4,9 +4,10 @@ from typing import Generator
 from pydantic_settings import BaseSettings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from src.common.settings import SettingsMeta
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings, metaclass=SettingsMeta):
     database_url: str = "sqlite:///./route_planner.db"
     kafka_brokers: str | None = None
 

@@ -6,10 +6,13 @@ import json
 from typing import Any, AsyncIterator
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from opentelemetry import trace
 
 
 class KafkaProducer:
     """Simple JSON serializing Kafka producer."""
+
+    _tracer = trace.get_tracer(__name__)
 
     def __init__(self, brokers: str) -> None:
         self._producer = AIOKafkaProducer(
@@ -37,7 +40,8 @@ class KafkaProducer:
         await self._producer.stop()
 
     async def send(self, topic: str, key: Any, value: Any) -> None:
-        await self._producer.send_and_wait(topic, value=value, key=key)
+        with self._tracer.start_as_current_span(f"event.produce:{topic}"):
+            await self._producer.send_and_wait(topic, value=value, key=key)
 
     async def __aenter__(self) -> "KafkaProducer":
         await self.start()

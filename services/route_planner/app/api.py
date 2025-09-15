@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter, Depends, HTTPException, status
+from opentelemetry import trace
 from sqlalchemy.orm import Session
 
 from . import deps, models, schemas
@@ -101,9 +102,11 @@ async def _send_route_confirmed(
             "distance_m": route.distance_m,
             "order": snapshot.order,
         }
-        await producer.send_and_wait(
-            "route.confirmed", json.dumps(payload).encode(), key=str(route.id).encode()
-        )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("event.produce:route.confirmed"):
+            await producer.send_and_wait(
+                "route.confirmed", json.dumps(payload).encode(), key=str(route.id).encode()
+            )
     finally:
         await producer.stop()
 

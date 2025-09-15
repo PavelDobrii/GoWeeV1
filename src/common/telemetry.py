@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -13,26 +15,21 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from .settings import settings
-
 
 def setup_otel(app: FastAPI, service_name: str = "app") -> None:
     """Configure OpenTelemetry tracing and metrics for a FastAPI app."""
 
     resource = Resource.create({"service.name": service_name})
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
     # Traces
     tracer_provider = TracerProvider(resource=resource)
-    span_exporter = OTLPSpanExporter(
-        endpoint=settings.otel_exporter_otlp_endpoint, insecure=True
-    )
+    span_exporter = OTLPSpanExporter(endpoint=endpoint)
     tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
     trace.set_tracer_provider(tracer_provider)
 
     # Metrics
-    metric_exporter = OTLPMetricExporter(
-        endpoint=settings.otel_exporter_otlp_endpoint, insecure=True
-    )
+    metric_exporter = OTLPMetricExporter(endpoint=endpoint)
     reader = PeriodicExportingMetricReader(metric_exporter)
     meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(meter_provider)

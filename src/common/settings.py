@@ -4,9 +4,23 @@ from __future__ import annotations
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from pydantic._internal._model_construction import ModelMetaclass
 
 
-class Settings(BaseSettings):
+class SettingsMeta(ModelMetaclass):
+    """Metaclass to allow overriding fields without type annotations."""
+
+    def __new__(mcls, name, bases, namespace, **kwargs):  # type: ignore[override]
+        annotations = dict(namespace.get("__annotations__", {}))
+        for base in bases:
+            for field, ann in getattr(base, "__annotations__", {}).items():
+                if field in namespace and field not in annotations:
+                    annotations[field] = ann
+        namespace["__annotations__"] = annotations
+        return super().__new__(mcls, name, bases, namespace, **kwargs)
+
+
+class Settings(BaseSettings, metaclass=SettingsMeta):
     """Base settings for all services."""
 
     kafka_brokers: str = Field(..., alias="KAFKA_BROKERS")
