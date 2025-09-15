@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'poetry'
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install --no-interaction --no-root
+      - name: Lint
+        run: poetry run ruff check .
+      - name: Typecheck
+        run: poetry run mypy .
+      - name: Tests
+        run: poetry run pytest -q
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: auth_profile
+            path: services/auth_profile
+          - service: delivery_prefetch
+            path: services/delivery_prefetch
+          - service: orchestrator
+            path: services/orchestrator
+          - service: paywall_billing
+            path: services/paywall_billing
+          - service: route_planner
+            path: services/route_planner
+          - service: story_service
+            path: services/story_service
+          - service: tts_service
+            path: services/tts_service
+          - service: trip_runtime
+            path: services/trip_runtime
+          - service: template_service
+            path: template_service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Build and push image
+        env:
+          IMAGE: ghcr.io/${{ secrets.GHCR_USERNAME }}/${{ matrix.service }}
+        run: |
+          docker build -t $IMAGE:${{ github.sha }} ${{ matrix.path }}
+          docker push $IMAGE:${{ github.sha }}
