@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 import time
+import inspect
 
 from prometheus_client import Histogram
 from sqlalchemy import func, select
@@ -35,11 +36,15 @@ class WorkflowManager:
         route_id = str(event["route_id"])
         async with get_session() as session:
             workflow = models.Workflow(route_id=route_id, status="story")
-            session.merge(workflow)
+            res = session.merge(workflow)
+            if inspect.isawaitable(res):
+                await res
             step = models.WorkflowStep(
                 route_id=route_id, step="story", status="pending", retries=0
             )
-            session.merge(step)
+            res = session.merge(step)
+            if inspect.isawaitable(res):
+                await res
             await session.commit()
         await self.producer.send(
             "story.generate",
@@ -66,7 +71,7 @@ class WorkflowManager:
                 step.status = "completed"
             for story in stories:
                 story_id = str(story["story_id"])
-                session.merge(
+                res = session.merge(
                     models.WorkflowStep(
                         route_id=route_id,
                         step=f"tts:{story_id}",
@@ -74,6 +79,8 @@ class WorkflowManager:
                         retries=0,
                     )
                 )
+                if inspect.isawaitable(res):
+                    await res
             await session.commit()
         for story in stories:
             story_id = str(story["story_id"])
