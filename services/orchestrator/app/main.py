@@ -38,22 +38,24 @@ def _start_consumer(coro: Coroutine[Any, Any, None]) -> None:
 
 async def _consume_story(manager: workflow.WorkflowManager) -> None:
     consumer = KafkaConsumer(
-        settings.kafka_brokers, "story.generate", group_id="orchestrator-story"
+        settings.kafka_brokers,
+        "story.generate.completed",
+        group_id="orchestrator-story",
     )
     async with consumer:
         async for msg in consumer:
             value = msg.value
-            if value.get("event") == "story.generate.completed":
-                await manager.handle_story_generate_completed(value)
+            await manager.handle_story_generate_completed(value)
 
 
 async def _consume_tts(manager: workflow.WorkflowManager) -> None:
-    consumer = KafkaConsumer(settings.kafka_brokers, "tts", group_id="orchestrator-tts")
+    consumer = KafkaConsumer(
+        settings.kafka_brokers, "tts.completed", group_id="orchestrator-tts"
+    )
     async with consumer:
         async for msg in consumer:
             value = msg.value
-            if value.get("event") == "tts.completed":
-                await manager.handle_tts_completed(value)
+            await manager.handle_tts_completed(value)
 
 
 @app.on_event("startup")
@@ -66,8 +68,8 @@ async def startup() -> None:
     _start_consumer(_consume_story(manager))
     _start_consumer(_consume_tts(manager))
     KAFKA_CONSUMER_LAG.labels("orchestrator", "route.confirmed").set(0)
-    KAFKA_CONSUMER_LAG.labels("orchestrator", "story.generate").set(0)
-    KAFKA_CONSUMER_LAG.labels("orchestrator", "tts").set(0)
+    KAFKA_CONSUMER_LAG.labels("orchestrator", "story.generate.completed").set(0)
+    KAFKA_CONSUMER_LAG.labels("orchestrator", "tts.completed").set(0)
     JOB_DURATION.labels("orchestrator", "startup").observe(0)
 
 

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from typing import Any
 from uuid import uuid4
 
@@ -9,8 +10,11 @@ from opentelemetry import trace
 from sqlalchemy.orm import Session
 
 from . import deps, models, qc, schemas
+from .llm import StoryGenerationError
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -18,18 +22,6 @@ def forbidden_words() -> list[str]:
     """Return forbidden words from settings."""
     settings = deps.get_settings()
     return [w.strip() for w in settings.forbidden_words.split(",") if w.strip()]
-
-
-def _fake_llm(poi_id: int, lang: str, tags: list[str]) -> str:
-    words = [
-        "lorem",
-        "ipsum",
-        "dolor",
-        "sit",
-        "amet",
-    ]
-    text = " ".join(words * 60)  # 300 words
-    return f"# Story for POI {poi_id}\n\n{text}"
 
 
 def _store_story(db: Session, poi_id: int, lang: str, text: str, status: str) -> int:
@@ -40,27 +32,47 @@ def _store_story(db: Session, poi_id: int, lang: str, text: str, status: str) ->
     return story.id
 
 
-def _generate_single(poi_id: int, lang: str, tags: list[str]) -> int:
+def _generate_single(poi_id: int, lang: str, tags: list[str]) -> dict[str, Any]:
     SessionLocal = deps.get_sessionmaker()
     db = SessionLocal()
     try:
-        text = _fake_llm(poi_id, lang, tags)
+        generator = deps.get_story_generator()
+        try:
+            text = generator.generate(poi_id, lang, tags)
+            status = "completed"
+        except StoryGenerationError as exc:
+            logger.warning("Генерация истории не удалась: %s", exc)
+            text = (
+                "# Ошибка генерации\n\n"
+                "Не удалось получить рассказ из ChatGPT. "
+                "Попробуйте повторить запрос позже."
+            )
+            status = "failed"
         forbidden = forbidden_words()
-        status = "completed" if qc.check_quality(text, forbidden) else "rejected"
+        if status == "completed" and not qc.check_quality(text, forbidden):
+            status = "rejected"
         story_id = _store_story(db, poi_id, lang, text, status)
-        return story_id
+        return {
+            "poi_id": poi_id,
+            "story_id": story_id,
+            "lang": lang,
+            "status": status,
+            "markdown": text,
+        }
     finally:
         db.close()
 
 
-async def _send_completed(route_id: str, stories: list[dict[str, Any]]) -> None:
+async def _send_completed(
+    route_id: str, lang: str, stories: list[dict[str, Any]]
+) -> None:
     settings = deps.get_settings()
     if not settings.kafka_brokers:
         return
     producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_brokers.split(","))
     await producer.start()
     try:
-        payload = {"route_id": route_id, "stories": stories}
+        payload = {"route_id": route_id, "lang": lang, "stories": stories}
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span("event.produce:story.generate.completed"):
             await producer.send_and_wait(
@@ -76,9 +88,9 @@ def _process_batch(route_id: str, lang: str) -> None:
     poi_ids = [1, 2]
     stories: list[dict[str, Any]] = []
     for pid in poi_ids:
-        story_id = _generate_single(pid, lang, [])
-        stories.append({"poi_id": pid, "story_id": story_id})
-    asyncio.run(_send_completed(route_id, stories))
+        story = _generate_single(pid, lang, [])
+        stories.append(story)
+    asyncio.run(_send_completed(route_id, lang, stories))
 
 
 @router.post(

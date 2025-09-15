@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 from typing import Dict, Tuple
 from uuid import uuid4
@@ -8,9 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from opentelemetry import trace
 from sqlalchemy.orm import Session
 
-from . import deps, models, schemas
+from . import deps, maps, models, schemas
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 # Sample POI coordinates (lat, lon)
 POIS: Dict[int, tuple[float, float]] = {
@@ -75,6 +78,17 @@ async def preview_route(data: schemas.PreviewRequest) -> schemas.PreviewResponse
     distance = _route_distance(order)
     speed = SPEED_M_PER_MIN.get(data.mode, 1000.0)
     eta = distance / speed if speed else 0.0
+    gm_client = maps.get_maps_client()
+    if gm_client:
+        coords = [POIS[pid] for pid in order]
+        try:
+            estimate = gm_client.estimate_route(order, coords, data.mode)
+        except maps.GoogleMapsError as exc:
+            logger.warning("Не удалось получить маршрут из Google Maps: %s", exc)
+        else:
+            order = estimate.order
+            distance = estimate.distance_m
+            eta = estimate.duration_min
     option_id = str(uuid4())
     option = schemas.RouteOption(
         option_id=option_id,

@@ -14,6 +14,13 @@ class Settings(BaseSettings, metaclass=SettingsMeta):
     database_url: str = "sqlite:///./tts_service.db"
     kafka_brokers: str | None = None
     audio_dir: str = "data/audio"
+    google_credentials_path: str | None = None
+    google_tts_voice: str = "ru-RU-Wavenet-D"
+    google_tts_language: str = "ru-RU"
+    google_tts_audio_encoding: str = "mp3"
+    google_tts_speaking_rate: float = 1.0
+    google_tts_pitch: float = 0.0
+    google_tts_effects_profile_id: str | None = None
 
 
 @lru_cache

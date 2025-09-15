@@ -12,6 +12,10 @@ from src.common.settings import SettingsMeta
 class Settings(BaseSettings, metaclass=SettingsMeta):
     database_url: str = "sqlite:///./route_planner.db"
     kafka_brokers: str | None = None
+    google_maps_api_key: str | None = None
+    google_maps_language: str = "ru"
+    google_maps_region: str | None = "ru"
+    google_maps_timeout: float = 5.0
 
 
 @lru_cache

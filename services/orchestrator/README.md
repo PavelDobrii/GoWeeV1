@@ -5,8 +5,8 @@ Orchestrator координирует полный цикл подготовки
 
 ## Основные возможности
 - Создаёт запись `Workflow` при получении события `route.confirmed` и инициирует генерацию историй.
-- Отслеживает завершение генерации историй (`story.generate.completed`) и запускает пакет запросов в TTS.
-- Контролирует завершение TTS для каждой истории и после успешного окончания уведомляет Delivery Prefetch.
+- Отслеживает события `story.generate.completed`, получает готовые тексты и отправляет задания в TTS cо встроенным текстом.
+- Контролирует завершение TTS по событиям `tts.completed`, учитывая статус `completed`/`failed`, и после успешного окончания уведомляет Delivery Prefetch.
 - Позволяет просматривать прогресс workflow и принудительно перезапускать пакет TTS через HTTP.
 - Экспортирует Prometheus-метрики и стандартные health-check'и.
 
@@ -23,10 +23,10 @@ Orchestrator координирует полный цикл подготовки
 | Направление | Топик | Пайлоад |
 | --- | --- | --- |
 | Consume | `route.confirmed` | `{ "route_id": <str>, "mode": <str>, ... }` — старт workflow, после чего отправляется команда истории. |
-| Consume | `story.generate` | Сообщения с `event=story.generate.completed` подтверждают завершение генерации историй и инициируют TTS. |
-| Consume | `tts` | Сообщения с `event=tts.completed` закрывают отдельные шаги TTS. |
+| Consume | `story.generate.completed` | `{ "route_id": <str>, "lang": <str>, "stories": [...] }` — уведомляет о готовых текстах. |
+| Consume | `tts.completed` | `{ "route_id": <str>, "story_id": <str>, "status": <str>, ... }` — завершение синтеза с указанием статуса. |
 | Produce | `story.generate` | `{ "route_id": <str>, "lang": "ru" }` — команда Story Service. |
-| Produce | `tts` | `{ "route_id": <str>, "story_id": <str> }` — задания для TTS на каждую историю. |
+| Produce | `tts.requested` | `{ "route_id": <str>, "story_id": <str>, "text": <str>, ... }` — задания для TTS на каждую историю. |
 | Produce | `delivery.prefetch` | `{ "route_id": <str>, "next_audio": [...] }` — уведомление после завершения всех TTS-джобов. |
 
 Kafka-интеграция построена на `src.common.kafka`, поэтому при включении OpenTelemetry все взаимодействия попадают в трассировки автоматически.

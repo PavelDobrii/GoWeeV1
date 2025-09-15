@@ -14,6 +14,12 @@ router = APIRouter()
 async def request_tts(data: schemas.TTSRequest) -> schemas.JobResponse:
     job_id = str(uuid4())
     settings = deps.get_settings()
+    payload = data.model_dump()
+    if not payload.get("voice"):
+        payload["voice"] = settings.google_tts_voice
+    if not payload.get("format"):
+        payload["format"] = settings.google_tts_audio_encoding
+    payload = {k: v for k, v in payload.items() if v is not None}
     if settings.kafka_brokers:
         producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_brokers.split(","))
         await producer.start()
@@ -22,7 +28,7 @@ async def request_tts(data: schemas.TTSRequest) -> schemas.JobResponse:
             with tracer.start_as_current_span("event.produce:tts.requested"):
                 await producer.send_and_wait(
                     "tts.requested",
-                    json.dumps(data.model_dump()).encode(),
+                    json.dumps(payload).encode(),
                     key=str(data.story_id).encode(),
                 )
         finally:

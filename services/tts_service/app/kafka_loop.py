@@ -10,6 +10,7 @@ from opentelemetry import trace
 from src.common.metrics import JOB_DURATION
 
 from . import deps, models
+from .tts import TextToSpeechError, get_tts_client
 
 logger = logging.getLogger(__name__)
 
@@ -24,39 +25,75 @@ async def _handle_message(message) -> None:
         return
     _processed.add(key)
     payload = json.loads(message.value.decode())
-    story_id = payload["story_id"]
-    voice = payload["voice"]
-    fmt = payload["format"]
+    story_id = int(payload["story_id"])
+    route_id_raw = payload.get("route_id")
+    route_id = str(route_id_raw) if route_id_raw is not None else ""
+    voice = payload.get("voice")
+    fmt = payload.get("format")
+    text = payload.get("text", "")
+    lang = payload.get("lang")
 
     deps.ensure_audio_dir()
     SessionLocal = deps.get_sessionmaker()
     db = SessionLocal()
+    settings = deps.get_settings()
+    tts_client = get_tts_client()
+    status = "completed"
+    if tts_client is None:
+        logger.warning("Клиент Google TTS не инициализирован, используется заглушка")
+        audio_bytes = b""
+        duration_sec = 0
+        status = "failed"
+        extension = (fmt or settings.google_tts_audio_encoding).lower()
+    else:
+        try:
+            audio_bytes, extension, duration_sec = tts_client.synthesize(
+                text=text,
+                voice=voice,
+                audio_format=fmt,
+                language=lang,
+            )
+        except TextToSpeechError:
+            logger.exception("Не удалось синтезировать речь для истории %s", story_id)
+            audio_bytes = b""
+            duration_sec = 0
+            status = "failed"
+            extension = (fmt or settings.google_tts_audio_encoding).lower()
     try:
         audio = models.AudioFile(
             story_id=story_id,
-            voice=voice,
-            format=fmt,
+            voice=voice or settings.google_tts_voice,
+            format=extension,
             path="",
-            duration_sec=0,
+            duration_sec=duration_sec,
         )
         db.add(audio)
         db.commit()
         db.refresh(audio)
-        settings = deps.get_settings()
-
-        audio_path = Path(settings.audio_dir) / f"{audio.id}.{fmt}"
+        audio_path = Path(settings.audio_dir) / f"{audio.id}.{extension}"
         audio.path = str(audio_path)
         db.commit()
-        audio_path.touch()
     finally:
         db.close()
 
-    settings = deps.get_settings()
+    audio_path = Path(settings.audio_dir) / f"{audio.id}.{extension}"
+    if audio_bytes:
+        audio_path.write_bytes(audio_bytes)
+    else:
+        audio_path.touch()
+
     if settings.kafka_brokers:
         producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_brokers.split(","))
         await producer.start()
         try:
-            out = {"story_id": story_id, "audio_id": audio.id, "duration_sec": 0}
+            out = {
+                "route_id": route_id,
+                "story_id": story_id,
+                "audio_id": audio.id,
+                "duration_sec": duration_sec,
+                "status": status,
+                "format": extension,
+            }
             tracer = trace.get_tracer(__name__)
             with tracer.start_as_current_span("event.produce:tts.completed"):
                 await producer.send_and_wait(
