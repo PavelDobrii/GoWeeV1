@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from src.common.metrics import KAFKA_CONSUMER_LAG, JOB_DURATION, setup_metrics
+from src.common.metrics import JOB_DURATION, KAFKA_CONSUMER_LAG, setup_metrics
 from src.common.telemetry import setup_otel
 
 from . import deps

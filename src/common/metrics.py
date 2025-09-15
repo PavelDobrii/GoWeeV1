@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+
 from fastapi import FastAPI, Request, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,

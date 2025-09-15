@@ -4,7 +4,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from services.delivery_prefetch.app import kafka_loop, storage, deps
+from services.delivery_prefetch.app import deps, kafka_loop, storage
 from services.delivery_prefetch.app.main import app
 
 
@@ -15,7 +15,8 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     monkeypatch.setattr(deps, "get_settings", lambda: TestSettings())
 
-    async def dummy_start(settings: deps.Settings) -> None:  # pragma: no cover - patched
+    async def dummy_start(settings: deps.Settings) -> None:  # pragma: no cover
+        """Patched consumer start used in tests."""
         pass
 
     from services.delivery_prefetch.app import main as main_module

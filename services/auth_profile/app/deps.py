@@ -65,18 +65,36 @@ def create_tokens(user: User) -> tuple[str, str]:
         "token_version": user.token_version,
         "exp": now + timedelta(days=settings.refresh_token_expire_days),
     }
-    access = jwt.encode(access_payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
-    refresh = jwt.encode(refresh_payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    access = jwt.encode(
+        access_payload,
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+    refresh = jwt.encode(
+        refresh_payload,
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
     return access, refresh
 
 
 def decode_token(token: str, token_type: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
     except jwt.PyJWTError as exc:  # pragma: no cover
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        ) from exc
     if payload.get("type") != token_type:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type",
+        )
     return payload
 
 
@@ -87,5 +105,8 @@ def get_current_user(
     payload = decode_token(credentials.credentials, "access")
     user = db.get(User, payload["sub"])
     if user is None or user.token_version != payload.get("token_version"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
     return user

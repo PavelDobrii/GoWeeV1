@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
 from pydantic._internal._model_construction import ModelMetaclass
+from pydantic_settings import BaseSettings
 
 
 class SettingsMeta(ModelMetaclass):

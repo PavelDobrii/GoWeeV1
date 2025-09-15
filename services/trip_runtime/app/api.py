@@ -71,7 +71,10 @@ async def _send_poi_approaching(session_id: str, poi_id: int, distance: float) -
 @router.post("/trip/start", response_model=schemas.TripStartResponse)
 async def start_trip(data: schemas.TripStartRequest) -> schemas.TripStartResponse:
     if data.route_id not in ROUTES:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Route not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Route not found",
+        )
     session_id = str(uuid4())
     _sessions[session_id] = Session(route_id=data.route_id)
     return schemas.TripStartResponse(session_id=session_id)
@@ -81,7 +84,10 @@ async def start_trip(data: schemas.TripStartRequest) -> schemas.TripStartRespons
 async def ping_trip(data: schemas.TripPingRequest) -> schemas.TripPingResponse:
     session = _sessions.get(data.session_id)
     if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
     route = ROUTES.get(session.route_id, [])
     if session.next_index >= len(route):
         return schemas.TripPingResponse(upcoming_poi=None, distance_m=None)
