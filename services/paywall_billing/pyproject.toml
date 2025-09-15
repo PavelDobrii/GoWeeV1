@@ -9,6 +9,7 @@ packages = [{ include = "app" }]
 python = "^3.11"
 fastapi = "^0.110.0"
 uvicorn = {version = "^0.30.0", extras = ["standard"]}
+prometheus-client = "^0.20.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0"]

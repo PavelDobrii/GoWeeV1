@@ -12,6 +12,7 @@ uvicorn = {version = "^0.30.0", extras = ["standard"]}
 aiokafka = "^0.10.0"
 pydantic-settings = "^2.1.0"
 sqlalchemy = "^2.0.0"
+prometheus-client = "^0.20.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0"]

@@ -1,13 +1,13 @@
 import logging
-
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
+
+from src.common.metrics import KAFKA_CONSUMER_LAG, JOB_DURATION, setup_metrics
 
 from .api import router as api_router
 from .deps import ensure_audio_dir, get_settings, init_db
@@ -27,6 +27,7 @@ def setup_otel(app: FastAPI) -> None:
 
 
 app = FastAPI(title="tts_service")
+setup_metrics(app, "tts_service")
 
 
 @app.on_event("startup")
@@ -36,6 +37,8 @@ async def startup_event() -> None:
     init_db()
     ensure_audio_dir()
     await start_kafka_consumer(settings)
+    KAFKA_CONSUMER_LAG.labels("tts_service", "tts.requested").set(0)
+    JOB_DURATION.labels("tts_service", "startup").observe(0)
 
 
 @app.get("/healthz")
@@ -46,11 +49,6 @@ async def healthz() -> dict[str, str]:
 @app.get("/readyz")
 async def readyz() -> dict[str, str]:
     return {"status": "ready"}
-
-
-@app.get("/metrics")
-async def metrics() -> Response:
-    return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
 
 app.include_router(api_router)

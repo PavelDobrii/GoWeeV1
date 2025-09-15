@@ -1,0 +1,43 @@
+{
+  "id": null,
+  "uid": "qos",
+  "title": "QoS",
+  "schemaVersion": 36,
+  "version": 0,
+  "time": {"from": "now-5m", "to": "now"},
+  "panels": [
+    {
+      "type": "graph",
+      "title": "HTTP P95 latency",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))"
+        }
+      ],
+      "id": 1
+    },
+    {
+      "type": "graph",
+      "title": "Messages per minute",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(job_duration_seconds_count{job=\"handle_message\"}[1m])) by (service) * 60"
+        }
+      ],
+      "id": 2
+    },
+    {
+      "type": "graph",
+      "title": "Route confirmed to first audio p95",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(route_to_first_audio_seconds_bucket[5m])) by (le))"
+        }
+      ],
+      "id": 3
+    }
+  ]
+}

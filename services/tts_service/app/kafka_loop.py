@@ -5,6 +5,8 @@ from typing import Set
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
+from src.common.metrics import JOB_DURATION
+
 from . import deps, models
 
 logger = logging.getLogger(__name__)
@@ -13,6 +15,7 @@ _processed: Set[bytes] = set()
 
 
 async def _handle_message(message) -> None:
+    start = asyncio.get_event_loop().time()
     key = message.key or str(message.offset).encode()
     if key in _processed:
         logger.info("Skipping processed message: %s", key)
@@ -52,6 +55,8 @@ async def _handle_message(message) -> None:
             )
         finally:
             await producer.stop()
+    duration = asyncio.get_event_loop().time() - start
+    JOB_DURATION.labels("tts_service", "handle_message").observe(duration)
 
 
 async def _consume(settings: deps.Settings) -> None:
