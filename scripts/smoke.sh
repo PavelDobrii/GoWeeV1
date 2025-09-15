@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 AUTH=http://localhost:8001
 ROUTES=http://localhost:8002
