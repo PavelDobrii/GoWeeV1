@@ -9,10 +9,10 @@ TRIP=http://localhost:8007
 EMAIL="user$RANDOM@example.com"
 PASSWORD="pass"
 
-# Register user
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$AUTH/auth/register" \
+# Register user and capture status
+REG_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$AUTH/auth/register" \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
 # Login and extract token
 ACCESS=$(curl -s -X POST "$AUTH/auth/login" -H "Content-Type: application/json" \
@@ -32,8 +32,9 @@ echo "route: $ROUTE"
 
 sleep 1
 
-# Prefetch
-curl -s -o /dev/null -w "%{http_code}\n" "$PREFETCH/delivery/prefetch?route_id=$ROUTE&next=1"
+# Prefetch and capture status
+PREF_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+  "$PREFETCH/delivery/prefetch?route_id=$ROUTE&next=1")
 
 # Start trip and capture session id
 SESSION=$(curl -s -X POST "$TRIP/trip/start" -H "Content-Type: application/json" \
@@ -42,10 +43,13 @@ SESSION=$(curl -s -X POST "$TRIP/trip/start" -H "Content-Type: application/json"
 echo "session: $SESSION"
 
 # Ping trip
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$TRIP/trip/ping" -H "Content-Type: application/json" \
+curl -s -o /dev/null -X POST "$TRIP/trip/ping" -H "Content-Type: application/json" \
   -d "{\"session_id\":\"$SESSION\",\"points\":[{\"lat\":55.751244,\"lon\":37.618423}]}"
 
-# Finish trip
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$TRIP/trip/finish" -H "Content-Type: application/json" \
-  -d "{\"session_id\":\"$SESSION\"}"
+# Finish trip and capture status
+FIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$TRIP/trip/finish" \
+  -H "Content-Type: application/json" \
+  -d "{\"session_id\":\"$SESSION\"}")
+
+printf "%s\n%s\n%s\n" "$REG_CODE" "$PREF_CODE" "$FIN_CODE"
 
