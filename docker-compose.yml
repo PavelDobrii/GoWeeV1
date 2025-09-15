@@ -66,6 +66,7 @@ services:
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - core-net
+
   auth-profile:
     build: ./services/auth_profile
     ports:
@@ -77,5 +78,147 @@ services:
     depends_on:
       - postgres
       - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  route-planner:
+    build: ./services/route_planner
+    ports:
+      - "8002:8000"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  orchestrator:
+    build: ./services/orchestrator
+    ports:
+      - "8003:8000"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+      POSTGRES_DSN: postgresql+asyncpg://cg:cg@postgres:5432/cityguide
+    depends_on:
+      - postgres
+      - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/openapi.json').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  story-service:
+    build: ./services/story_service
+    ports:
+      - "8004:8000"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tts-service:
+    build: ./services/tts_service
+    ports:
+      - "8005:8000"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  delivery-prefetch:
+    build: ./services/delivery_prefetch
+    ports:
+      - "8006:8000"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  trip-runtime:
+    build: ./services/trip_runtime
+    ports:
+      - "8007:8000"
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      - redpanda
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  paywall-billing:
+    build: ./services/paywall_billing
+    ports:
+      - "8008:8000"
+    networks:
+      - core-net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - route-planner
     networks:
       - core-net
