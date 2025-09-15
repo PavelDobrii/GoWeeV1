@@ -9,12 +9,14 @@ from fastapi import FastAPI
 
 from src.common.kafka import KafkaConsumer, KafkaProducer
 from src.common.metrics import KAFKA_CONSUMER_LAG, JOB_DURATION, setup_metrics
+from src.common.telemetry import setup_otel
 from src.common.settings import settings
 
 from . import api, workflow
 
 app = FastAPI()
 setup_metrics(app, "orchestrator")
+setup_otel(app, "orchestrator")
 app.include_router(api.router)
 
 _producer: KafkaProducer | None = None

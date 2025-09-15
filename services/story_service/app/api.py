@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter, BackgroundTasks, Depends
+from opentelemetry import trace
 from sqlalchemy.orm import Session
 
 from . import deps, models, qc, schemas
@@ -56,11 +57,13 @@ async def _send_completed(route_id: str, stories: list[dict[str, Any]]) -> None:
     await producer.start()
     try:
         payload = {"route_id": route_id, "stories": stories}
-        await producer.send_and_wait(
-            "story.generate.completed",
-            json.dumps(payload).encode(),
-            key=route_id.encode(),
-        )
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("event.produce:story.generate.completed"):
+            await producer.send_and_wait(
+                "story.generate.completed",
+                json.dumps(payload).encode(),
+                key=route_id.encode(),
+            )
     finally:
         await producer.stop()
 

@@ -4,6 +4,7 @@ import logging
 from typing import Set
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from opentelemetry import trace
 
 from src.common.metrics import JOB_DURATION
 
@@ -50,9 +51,11 @@ async def _handle_message(message) -> None:
         await producer.start()
         try:
             out = {"story_id": story_id, "audio_id": audio.id, "duration_sec": 0}
-            await producer.send_and_wait(
-                "tts.completed", json.dumps(out).encode(), key=str(story_id).encode()
-            )
+            tracer = trace.get_tracer(__name__)
+            with tracer.start_as_current_span("event.produce:tts.completed"):
+                await producer.send_and_wait(
+                    "tts.completed", json.dumps(out).encode(), key=str(story_id).encode()
+                )
         finally:
             await producer.stop()
     duration = asyncio.get_event_loop().time() - start

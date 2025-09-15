@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter
+from opentelemetry import trace
 
 from . import deps, schemas
 
@@ -17,11 +18,13 @@ async def request_tts(data: schemas.TTSRequest) -> schemas.JobResponse:
         producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_brokers.split(","))
         await producer.start()
         try:
-            await producer.send_and_wait(
-                "tts.requested",
-                json.dumps(data.model_dump()).encode(),
-                key=str(data.story_id).encode(),
-            )
+            tracer = trace.get_tracer(__name__)
+            with tracer.start_as_current_span("event.produce:tts.requested"):
+                await producer.send_and_wait(
+                    "tts.requested",
+                    json.dumps(data.model_dump()).encode(),
+                    key=str(data.story_id).encode(),
+                )
         finally:
             await producer.stop()
     return schemas.JobResponse(job_id=job_id)
