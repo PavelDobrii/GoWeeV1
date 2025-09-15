@@ -6,7 +6,6 @@ from src.common.telemetry import setup_otel
 from . import deps
 from .api import router
 
-
 app = FastAPI(title="story_service")
 setup_metrics(app, "story_service")
 setup_otel(app, "story_service")

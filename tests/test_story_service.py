@@ -1,11 +1,12 @@
 import json
 from typing import Any
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from services.story_service.app import deps, models
 from services.story_service.app.main import app
+
 
 @pytest.fixture()
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:

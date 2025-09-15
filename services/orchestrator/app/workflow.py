@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
-import time
 import inspect
+import time
+from typing import Any
 
 from prometheus_client import Histogram
 from sqlalchemy import func, select
@@ -14,7 +14,6 @@ from src.common.kafka import KafkaProducer
 from src.common.metrics import JOB_DURATION
 
 from . import models
-
 
 ROUTE_TO_AUDIO_SECONDS = Histogram(
     "route_to_first_audio_seconds",

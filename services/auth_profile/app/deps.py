@@ -1,6 +1,6 @@
+import hashlib
 from datetime import datetime, timedelta
 from functools import lru_cache
-import hashlib
 from typing import Generator
 
 import jwt

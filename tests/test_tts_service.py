@@ -2,10 +2,11 @@ import asyncio
 import json
 from typing import Any
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
-from services.tts_service.app import api, deps, kafka_loop, main as main_module, models
+from services.tts_service.app import api, deps, kafka_loop, models
+from services.tts_service.app import main as main_module
 from services.tts_service.app.main import app
 
 
